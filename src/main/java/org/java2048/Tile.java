@@ -228,5 +228,6 @@ public class Tile
 
     public void setCombineAnimation(boolean combineAnimation) {
         this.combineAnimation = combineAnimation;
+        if(combineAnimation) scaleCombine = 1.3;
     }
 }

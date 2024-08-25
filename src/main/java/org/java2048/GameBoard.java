@@ -3,6 +3,7 @@ package org.java2048;
 import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
+import java.io.*;
 import java.util.Random;
 
 public class GameBoard
@@ -19,22 +20,89 @@ public class GameBoard
     private BufferedImage finalBoard;
     private int x;
     private int y;
+    private int score;
+    private int highScore;
+    private Font scoreFont;
 
     private static int SPACING = 10;
     public static int BOARD_WIDTH = (COLS + 1) * SPACING + COLS * Tile.WIDTH;
     public static int BOARD_HEIGHT = (ROWS + 1) * SPACING + ROWS * Tile.HEIGHT;
     private boolean hasStarted;
 
+    //Saving path
+    private String saveDataPath;
+    private String fileName = "SaveData";
+
     public GameBoard(int x, int y)
     {
+        try {
+            saveDataPath = GameBoard.class.getProtectionDomain().getCodeSource().getLocation().toURI().getPath();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        scoreFont = Game.main.deriveFont(24f);
+
         this.x = x;
         this.y = y;
         board = new Tile[ROWS][COLS];
         gameBoard = new BufferedImage(BOARD_WIDTH, BOARD_HEIGHT, BufferedImage.TYPE_INT_RGB);
         finalBoard = new BufferedImage(BOARD_WIDTH, BOARD_HEIGHT, BufferedImage.TYPE_INT_RGB);
 
+        loadHighScore();
         createBoardImage();
         start();
+    }
+
+    private void createSaveData()
+    {
+        try {
+            File file = new File(saveDataPath, fileName);
+
+            FileWriter fileWriter = new FileWriter(file);
+            BufferedWriter writer = new BufferedWriter(fileWriter);
+            writer.write("" + 0);
+            //create fastest time
+            writer.close();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void loadHighScore()
+    {
+        try{
+            File f = new File(saveDataPath, fileName);
+            if(!f.isFile()) {
+                createSaveData();
+            }
+            BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(f)));
+            highScore = Integer.parseInt(reader.readLine());
+            //reader fastest time
+            reader.close();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void setHighScore()
+    {
+        FileWriter output = null;
+
+        try {
+            File f = new File(saveDataPath, fileName);
+            output = new FileWriter(f);
+            BufferedWriter writer = new BufferedWriter(output);
+
+            writer.write("" + highScore);
+
+            writer.close();
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void createBoardImage()
@@ -111,11 +179,22 @@ public class GameBoard
 
         g.drawImage(finalBoard, x, y , null);
         g2d.dispose();
+
+        g.setColor(Color.lightGray);
+        g.setFont(scoreFont);
+        g.drawString("" + score, 30, 40);
+        g.setColor(Color.red);
+        g.drawString("Best: " + highScore, Game.WIDTH - DrawUtils.getMessageWitgh("Best: " + highScore, scoreFont, g) - 20, 40);
     }
 
     public void update()
     {
         checkKeys();
+
+        if(score >= highScore){
+            highScore = score;
+        }
+
         for(int row = 0; row < ROWS; row++)
         {
             for(int col = 0; col < COLS; col++)
@@ -187,7 +266,7 @@ public class GameBoard
                 board[newRow - verticalDirection][newCol - horizontalDirection] = null;
                 board[newRow][newCol].setSlideTo(new Point(newRow, newCol));
                 board[newRow][newCol].setCombineAnimation(true);
-                // add score
+                score += board[newRow][newCol].getValue();
             }
             else {
                 move = false;
@@ -316,7 +395,7 @@ public class GameBoard
             }
         }
         dead = true;
-        //setHighScore(score)
+        setHighScore();
     }
 
     private boolean checkSurroundingTiles(int row, int col, Tile current)
